@@ -9,11 +9,11 @@ import (
 	"go.uber.org/zap/zapcore"
 )
 
-const logFilePath = "loglol.log"
+const logFile = "loglol.log"
 
 // FileLogger sets up logger to a file
 func FileLogger() {
-	logFileLocation, _ := os.OpenFile(logFilePath, os.O_CREATE|os.O_APPEND|os.O_RDWR, 0744)
+	logFileLocation, _ := os.OpenFile(logFile, os.O_CREATE|os.O_APPEND|os.O_RDWR, 0744)
 	log.SetOutput(logFileLocation)
 }
 
@@ -86,8 +86,43 @@ func getEncoder() zapcore.Encoder {
 }
 
 func getLogWriter() zapcore.WriteSyncer {
-	file, _ := os.OpenFile(logFilePath, os.O_CREATE|os.O_APPEND|os.O_RDWR, 0744)
+	file, _ := os.OpenFile(logFile, os.O_CREATE|os.O_APPEND|os.O_RDWR, 0744)
 	return zapcore.AddSync(file)
+}
+
+// LogInit returns a logger that shows log on the Console and a log file
+func LogInit(debug bool, f *os.File) *zap.SugaredLogger {
+	encoderConfig := zap.NewProductionEncoderConfig()
+	encoderConfig.EncodeTime = zapcore.ISO8601TimeEncoder
+	encoderConfig.EncodeLevel = zapcore.CapitalLevelEncoder
+
+	fileEncoder := zapcore.NewJSONEncoder(encoderConfig)
+	consoleEncoder := zapcore.NewConsoleEncoder(encoderConfig)
+
+	level := zap.InfoLevel
+	if debug {
+		level = zap.DebugLevel
+	}
+
+	core := zapcore.NewTee(
+		zapcore.NewCore(fileEncoder, zapcore.AddSync(f), level),
+		zapcore.NewCore(consoleEncoder, zapcore.AddSync(os.Stdout), level),
+	)
+	logger := zap.New(core)
+
+	return logger.Sugar()
+}
+
+// httpGetInjected is like the other HTTPGet functions except it accepts log function
+func httpGetInjected(url string, log *zap.SugaredLogger) {
+	log.Debugf("Trying to hit GET request for %s", url)
+	resp, err := http.Get(url)
+	if err != nil {
+		log.Errorf("Error fetching URL %s : Error = %s", url, err)
+	} else {
+		log.Infof("Success! statusCode = %s for URL %s", resp.Status, url)
+		resp.Body.Close()
+	}
 }
 
 func main() {
@@ -105,8 +140,14 @@ func main() {
 	// sugarHTTPGet("www.google.com")
 	// sugarHTTPGet("http://www.google.com")
 
-	ZapCoreLogger()
-	defer sugarLogger.Sync()
-	sugarHTTPGet("www.google.com")
-	sugarHTTPGet("http://www.google.com")
+	// ZapCoreLogger()
+	// defer sugarLogger.Sync()
+	// sugarHTTPGet("www.google.com")
+	// sugarHTTPGet("http://www.google.com")
+
+	home, _ := os.Getwd()
+	logFileLocation, _ := os.OpenFile(home+logFile, os.O_CREATE|os.O_APPEND|os.O_RDWR, 0744)
+	log := LogInit(true, logFileLocation)
+	httpGetInjected("www.google.com", log)
+	httpGetInjected("http://www.google.com", log)
 }
