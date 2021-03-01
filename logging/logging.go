@@ -12,7 +12,6 @@ func New(name string, debug bool) *zap.SugaredLogger {
 	encoderConfig := zap.NewProductionEncoderConfig()
 	encoderConfig.EncodeTime = zapcore.ISO8601TimeEncoder
 	encoderConfig.EncodeLevel = zapcore.CapitalLevelEncoder
-	encoderConfig.EncodeCaller = zapcore.FullCallerEncoder
 
 	consoleEncoder := zapcore.NewConsoleEncoder(encoderConfig)
 
