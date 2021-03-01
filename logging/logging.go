@@ -12,6 +12,7 @@ func New(name string, debug bool) *zap.SugaredLogger {
 	encoderConfig := zap.NewProductionEncoderConfig()
 	encoderConfig.EncodeTime = zapcore.ISO8601TimeEncoder
 	encoderConfig.EncodeLevel = zapcore.CapitalLevelEncoder
+	encoderConfig.EncodeCaller = zapcore.FullCallerEncoder
 
 	consoleEncoder := zapcore.NewConsoleEncoder(encoderConfig)
 
@@ -21,7 +22,7 @@ func New(name string, debug bool) *zap.SugaredLogger {
 	}
 
 	core := zapcore.NewCore(consoleEncoder, zapcore.AddSync(os.Stdout), level)
-	logger := zap.New(core)
+	logger := zap.New(core, zap.AddCaller())
 
 	defer logger.Sync() // flush the log
 
