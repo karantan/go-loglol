@@ -27,3 +27,23 @@ func New(name string, debug bool) *zap.SugaredLogger {
 
 	return logger.Named(name).Sugar()
 }
+
+// NewFileLogger creates a new sugar logger that writes to a file
+func NewFileLogger(path string, name string) (*zap.SugaredLogger, error) {
+	config := zap.NewProductionConfig()
+	config.OutputPaths = []string{path}
+
+	encoderConfig := zap.NewProductionEncoderConfig()
+	encoderConfig.EncodeTime = zapcore.ISO8601TimeEncoder
+	encoderConfig.EncodeLevel = zapcore.CapitalLevelEncoder
+
+	config.EncoderConfig = encoderConfig
+
+	logger, err := config.Build()
+	if err != nil {
+		return nil, err
+	}
+	defer logger.Sync() // flush the log
+
+	return logger.Named(name).Sugar(), nil
+}
